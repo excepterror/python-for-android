@@ -326,11 +326,28 @@ main.py that loads it.''')
         args.icon or default_icon,
         join(res_dir, 'drawable/icon.png')
     )
+
     if get_bootstrap_name() != "service_only":
-        shutil.copy(
-            args.presplash or default_presplash,
-            join(res_dir, 'drawable/presplash.jpg')
-        )
+        lottie_splashscreen = join(res_dir, 'raw/splashscreen.json')
+        if args.presplash_lottie:
+            shutil.copy(
+                'templates/lottie.xml',
+                join(res_dir, 'layout/lottie.xml')
+            )
+            ensure_dir(join(res_dir, 'raw'))
+            shutil.copy(
+                args.presplash_lottie,
+                join(res_dir, 'raw/splashscreen.json')
+            )
+        else:
+            if exists(lottie_splashscreen):
+                remove(lottie_splashscreen)
+                remove(join(res_dir, 'layout/lottie.xml'))
+
+            shutil.copy(
+                args.presplash or default_presplash,
+                join(res_dir, 'drawable/presplash.jpg')
+            )
 
     # If extra Java jars were requested, copy them into the libs directory
     jars = []
@@ -452,6 +469,13 @@ main.py that loads it.''')
 
     # Folder name for launcher (used by SDL2 bootstrap)
     url_scheme = 'kivy'
+
+    # Copy backup rules file if specified and update the argument
+    if args.backup_rules:
+        res_xml_dir = join(res_dir, 'xml')
+        ensure_dir(res_xml_dir)
+        shutil.copy(join(args.private, args.backup_rules), res_xml_dir)
+        args.backup_rules = split(args.backup_rules)[1][:-4]
 
     # Render out android manifest:
     manifest_path = "src/main/AndroidManifest.xml"
@@ -623,6 +647,9 @@ tools directory of the Android SDK.
         ap.add_argument('--presplash', dest='presplash',
                         help=('A jpeg file to use as a screen while the '
                               'application is loading.'))
+        ap.add_argument('--presplash-lottie', dest='presplash_lottie',
+                        help=('A lottie (json) file to use as an animation while the '
+                              'application is loading.'))
         ap.add_argument('--presplash-color',
                         dest='presplash_color',
                         default='#000000',
@@ -734,6 +761,13 @@ tools directory of the Android SDK.
                     help='Set the launch mode of the main activity in the manifest.')
     ap.add_argument('--allow-backup', dest='allow_backup', default='true',
                     help="if set to 'false', then android won't backup the application.")
+    ap.add_argument('--backup-rules', dest='backup_rules', default='',
+                    help=('Backup rules for Android Auto Backup. Argument is a '
+                          'filename containing xml. The filename should be '
+                          'located relative to the private directory containing your source code '
+                          'files (containing your main.py entrypoint). '
+                          'See https://developer.android.com/guide/topics/data/'
+                          'autobackup#IncludingFiles for more information'))
     ap.add_argument('--no-optimize-python', dest='optimize_python',
                     action='store_false', default=True,
                     help=('Whether to compile to optimised .pyo files, using -OO '
@@ -741,6 +775,9 @@ tools directory of the Android SDK.
     ap.add_argument('--extra-manifest-xml', default='',
                     help=('Extra xml to write directly inside the <manifest> element of'
                           'AndroidManifest.xml'))
+    ap.add_argument('--manifest-placeholders', dest='manifest_placeholders',
+                    default='[:]', help=('Inject build variables into the manifest '
+                                         'via the manifestPlaceholders property'))
 
     # Put together arguments, and add those from .p4a config file:
     if args is None:

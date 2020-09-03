@@ -36,6 +36,7 @@ android {
         targetSdkVersion {{ android_api }}
         versionCode {{ args.numeric_version }}
         versionName '{{ args.version }}'
+        manifestPlaceholders = {{ args.manifest_placeholders}}
     }
 
 	{% if debug_build -%}
@@ -108,5 +109,8 @@ dependencies {
     {%- for depend in args.depends %}
     compile '{{ depend }}'
     {%- endfor %}
+    {%- endif %}
+    {% if args.presplash_lottie %}
+    implementation 'com.airbnb.android:lottie:3.4.0'
     {%- endif %}
 }
