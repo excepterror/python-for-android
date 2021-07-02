@@ -25,6 +25,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.util.Log;
+import android.view.inputmethod.InputMethodManager;
 import android.view.SurfaceView;
 import android.view.ViewGroup;
 import android.view.View;
@@ -103,8 +104,7 @@ public class PythonActivity extends SDLActivity {
         protected String doInBackground(String... params) {
             File app_root_file = new File(params[0]);
             Log.v(TAG, "Ready to unpack");
-            PythonActivityUtil pythonActivityUtil = new PythonActivityUtil(mActivity, resourceManager);
-            pythonActivityUtil.unpackData("private", app_root_file);
+            PythonUtil.unpackData(mActivity, "private", app_root_file, true);
             return null;
         }
 
@@ -631,5 +631,13 @@ public class PythonActivity extends SDLActivity {
 
     public void requestPermissions(String[] permissions) {
         requestPermissionsWithRequestCode(permissions, 1);
+    }
+
+    public static void changeKeyboard(int inputType) {
+      if (SDLActivity.keyboardInputType != inputType){
+          SDLActivity.keyboardInputType = inputType;
+          InputMethodManager imm = (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+          imm.restartInput(mTextEdit);
+          }
     }
 }
