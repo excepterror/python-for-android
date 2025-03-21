@@ -6,7 +6,7 @@ import sh
 
 
 class LibxsltRecipe(Recipe):
-    version = '1.1.42'
+    version = 'v1.1.42'
     url = 'http://xmlsoft.org/sources/libxslt-{version}.tar.gz'
     # url = 'https://gitlab.gnome.org/GNOME/libxslt/-/archive/v1.1.42/libxslt-v1.1.42.tar.gz'
     depends = ['libxml2']
