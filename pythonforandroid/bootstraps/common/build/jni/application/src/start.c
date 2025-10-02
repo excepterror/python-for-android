@@ -16,10 +16,16 @@
 
 #include "bootstrap_name.h"
 
-#ifndef BOOTSTRAP_USES_NO_SDL_HEADERS
+#ifdef BOOTSTRAP_NAME_SDL2
 #include "SDL.h"
 #include "SDL_opengles2.h"
 #endif
+
+#ifdef BOOTSTRAP_NAME_SDL3
+#include "SDL3/SDL.h"
+#include "SDL3/SDL_main.h"
+#endif
+
 #include "android/log.h"
 
 #define ENTRYPOINT_MAXLEN 128
@@ -417,7 +423,7 @@ void Java_org_kivy_android_PythonActivity_nativeInit(JNIEnv* env, jclass cls, jo
 {
   /* This nativeInit follows SDL2 */
 
-  /* This interface could expand with ABI negotiation, calbacks, etc. */
+  /* This interface could expand with ABI negotiation, callbacks, etc. */
   /* SDL_Android_Init(env, cls); */
 
   /* SDL_SetMainReady(); */

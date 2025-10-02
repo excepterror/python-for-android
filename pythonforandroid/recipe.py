@@ -1,7 +1,7 @@
 from os.path import basename, dirname, exists, isdir, isfile, join, realpath, split
 import glob
-
 import hashlib
+import json
 from re import match
 
 import sh
@@ -12,8 +12,6 @@ import urllib.request
 from urllib.request import urlretrieve
 from os import listdir, unlink, environ, curdir, walk
 from sys import stdout
-from wheel.wheelfile import WheelFile
-from wheel.cli.tags import tags as wheel_tags
 import time
 try:
     from urlparse import urlparse
@@ -26,7 +24,7 @@ from pythonforandroid.logger import (
     logger, info, warning, debug, shprint, info_main, error)
 from pythonforandroid.util import (
     current_directory, ensure_dir, BuildInterruptingException, rmdir, move,
-    touch)
+    touch, patch_wheel_setuptools_logging)
 from pythonforandroid.util import load_source as import_recipe
 
 
@@ -59,6 +57,21 @@ class Recipe(metaclass=RecipeMeta):
     .. note:: Methods marked (internal) are used internally and you
               probably don't need to call them, but they are available
               if you want.
+    '''
+
+    _download_headers = None
+    '''Add additional headers used when downloading the package, typically
+    for authorization purposes.
+
+    Specified as an array of tuples:
+    [("header1", "foo"), ("header2", "bar")]
+
+    When specifying as an environment variable (DOWNLOAD_HEADER_my-package-name), use a JSON formatted fragement:
+    [["header1","foo"],["header2", "bar"]]
+
+    For example, when downloading from a private
+    github repository, you can specify the following:
+    [('Authorization', 'token <your personal access token>'), ('Accept', 'application/vnd.github+json')]
     '''
 
     _version = None
@@ -115,6 +128,7 @@ class Recipe(metaclass=RecipeMeta):
     keys should be the generated libraries and the values the relative path of
     the library inside his build folder. This dict will be used to perform
     different operations:
+
         - copy the library into the right location, depending on if it's shared
           or static)
         - check if we have to rebuild the library
@@ -139,6 +153,11 @@ class Recipe(metaclass=RecipeMeta):
 
     .. note:: Android NDK version > 17 only supports 'c++_shared', because
         starting from NDK r18 the `gnustl_shared` lib has been deprecated.
+    '''
+
+    min_ndk_api_support = 20
+    '''
+    Minimum ndk api recipe will support.
     '''
 
     def get_stl_library(self, arch):
@@ -171,6 +190,18 @@ class Recipe(metaclass=RecipeMeta):
         if self.url is None:
             return None
         return self.url.format(version=self.version)
+
+    @property
+    def download_headers(self):
+        key = "DOWNLOAD_HEADERS_" + self.name
+        env_headers = environ.get(key)
+        if env_headers:
+            try:
+                return [tuple(h) for h in json.loads(env_headers)]
+            except Exception as ex:
+                raise ValueError(f'Invalid Download headers for {key} - must be JSON formatted as [["header1","foo"],["header2","bar"]]: {ex}')
+
+        return environ.get(key, self._download_headers)
 
     def download_file(self, url, target, cwd=None):
         """
@@ -205,8 +236,10 @@ class Recipe(metaclass=RecipeMeta):
             while True:
                 try:
                     # jqueryui.com returns a 403 w/ the default user agent
-                    # Mozilla/5.0 doesnt handle redirection for liblzma
+                    # Mozilla/5.0 does not handle redirection for liblzma
                     url_opener.addheaders = [('User-agent', 'Wget/1.0')]
+                    if self.download_headers:
+                        url_opener.addheaders += self.download_headers
                     urlretrieve(url, target, report_hook)
                 except OSError as e:
                     attempts += 1
@@ -347,6 +380,9 @@ class Recipe(metaclass=RecipeMeta):
     # Public Recipe API to be subclassed if needed
 
     def download_if_necessary(self):
+        if self.ctx.ndk_api < self.min_ndk_api_support:
+            error(f"In order to build '{self.name}', you must set minimum ndk api (minapi) to `{self.min_ndk_api_support}`.\n")
+            exit(1)
         info_main('Downloading {}'.format(self.name))
         user_dir = environ.get('P4A_{}_DIR'.format(self.name.lower()))
         if user_dir is not None:
@@ -469,8 +505,7 @@ class Recipe(metaclass=RecipeMeta):
                     elif extraction_filename.endswith(
                             ('.tar.gz', '.tgz', '.tar.bz2', '.tbz2', '.tar.xz', '.txz')):
                         sh.tar('xf', extraction_filename)
-                        root_directory = sh.tar('tf', extraction_filename).stdout.decode(
-                                'utf-8').split('\n')[0].split('/')[0]
+                        root_directory = sh.tar('tf', extraction_filename).split('\n')[0].split('/')[0]
                         if root_directory != basename(directory_name):
                             move(root_directory, directory_name)
                     else:
@@ -545,7 +580,6 @@ class Recipe(metaclass=RecipeMeta):
         '''Should perform any necessary test and return True only if it needs
         building again. Per default we implement a library test, in case that
         we detect so.
-
         '''
         if self.built_libraries:
             return not all(
@@ -565,7 +599,7 @@ class Recipe(metaclass=RecipeMeta):
         '''This method is always called after `build_arch`. In case that we
         detect a library recipe, defined by the class attribute
         `built_libraries`, we will copy all defined libraries into the
-         right location.
+        right location.
         '''
         if not self.built_libraries:
             return
@@ -732,7 +766,7 @@ class IncludedFilesBehaviour(object):
 
 class BootstrapNDKRecipe(Recipe):
     '''A recipe class for recipes built in an Android project jni dir with
-    an Android.mk. These are not cached separatly, but built in the
+    an Android.mk. These are not cached separately, but built in the
     bootstrap's own building directory.
 
     To build an NDK project which is not part of the bootstrap, see
@@ -1172,7 +1206,7 @@ class CythonRecipe(PythonRecipe):
 
 
 class PyProjectRecipe(PythonRecipe):
-    '''Recipe for projects which containes `pyproject.toml`'''
+    """Recipe for projects which contain `pyproject.toml`"""
 
     # Extra args to pass to `python -m build ...`
     extra_build_args = []
@@ -1188,7 +1222,7 @@ class PyProjectRecipe(PythonRecipe):
         build_opts = join(build_dir, "build-opts.cfg")
 
         with open(build_opts, "w") as file:
-            file.write("[bdist_wheel]\nplat-name={}".format(
+            file.write("[bdist_wheel]\nplat_name={}".format(
                 self.get_wheel_platform_tag(arch)
             ))
             file.close()
@@ -1205,6 +1239,9 @@ class PyProjectRecipe(PythonRecipe):
         }[arch.arch]
 
     def install_wheel(self, arch, built_wheels):
+        with patch_wheel_setuptools_logging():
+            from wheel.cli.tags import tags as wheel_tags
+            from wheel.wheelfile import WheelFile
         _wheel = built_wheels[0]
         built_wheel_dir = dirname(_wheel)
         # Fix wheel platform tag
@@ -1233,7 +1270,7 @@ class PyProjectRecipe(PythonRecipe):
         )
         build_dir = self.get_build_dir(arch.arch)
         env = self.get_recipe_env(arch, with_flags_in_cc=True)
-        # make build dir separatly
+        # make build dir separately
         sub_build_dir = join(build_dir, "p4a_android_build")
         ensure_dir(sub_build_dir)
         # copy hostpython to built python to ensure correct selection of libs and includes

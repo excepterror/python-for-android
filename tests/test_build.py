@@ -51,7 +51,7 @@ class TestBuildBasic(unittest.TestCase):
             assert m_CythonRecipe().strip_object_files.called is False
 
             # Make sure strip object files IS called when
-            # `with_debug_symbols` is fasle:
+            # `with_debug_symbols` is false:
             ctx.with_debug_symbols = False
             assert run_pymodules_install(ctx, ctx.archs[0], modules, project_dir) is None
             assert m_CythonRecipe().strip_object_files.called is True
@@ -82,7 +82,7 @@ class TestTemplates(unittest.TestCase):
             "native_services": args.native_services
         }
         environment = jinja2.Environment(
-            loader=jinja2.FileSystemLoader('pythonforandroid/bootstraps/sdl2/build/templates/')
+            loader=jinja2.FileSystemLoader('pythonforandroid/bootstraps/_sdl_common/build/templates/')
         )
         template = environment.get_template('AndroidManifest.tmpl.xml')
         xml = template.render(**render_args)
