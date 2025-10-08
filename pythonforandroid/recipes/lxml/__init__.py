@@ -4,7 +4,7 @@ from os import uname
 
 
 class LXMLRecipe(CompiledComponentsPythonRecipe):
-    version = '4.9.2'
+    version = '5.3.1'
     url = 'https://pypi.python.org/packages/source/l/lxml/lxml-{version}.tar.gz'  # noqa
     depends = ['librt', 'libxml2', 'libxslt', 'setuptools']
     name = 'lxml'
