@@ -8,7 +8,8 @@ import sh
 class Libxml2Recipe(Recipe):
     # version = '2.9.12'
     # url = 'http://xmlsoft.org/sources/libxml2-{version}.tar.gz'
-    url = 'https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.12.10/libxml2-v2.12.10.tar.gz'
+    version = '2.12.10'
+    url = f'https://download.gnome.org/sources/libxml2/{version.rsplit(".", 1)[0]}/libxml2-{version}.tar.xz'
     depends = []
     patches = ['add-glob.c.patch']
     built_libraries = {'libxml2.a': '.libs'}
