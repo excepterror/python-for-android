@@ -4,8 +4,10 @@ from os import uname
 
 
 class LXMLRecipe(CompiledComponentsPythonRecipe):
-    version = '5.3.1'
-    url = 'https://pypi.python.org/packages/source/l/lxml/lxml-{version}.tar.gz'  # noqa
+    # version = '5.3.1'
+    # url = 'https://pypi.python.org/packages/source/l/lxml/lxml-{version}.tar.gz'  # noqa
+    version = "5.3.1"
+    url = f"https://files.pythonhosted.org/packages/source/l/lxml/lxml-{version}.tar.gz"
     depends = ['librt', 'libxml2', 'libxslt', 'setuptools']
     name = 'lxml'
 
