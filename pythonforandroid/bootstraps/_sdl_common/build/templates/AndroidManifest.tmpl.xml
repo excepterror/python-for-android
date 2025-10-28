@@ -60,7 +60,7 @@
         <meta-data android:name="wakelock" android:value="{% if args.wakelock %}1{% else %}0{% endif %}"/>
 
         <!-- Main activity -->
-        <activity android:name="{{ args.android_entrypoint }}"
+        <activity android:name="org.kivy.android.CustomPythonActivity"
                  android:label="@string/app_name"
                  android:resizeableActivity="true"
                  android:exported="true"
