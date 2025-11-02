@@ -136,14 +136,15 @@ public class PythonActivity extends SDLActivity {
                 SDLActivity.nativeSetenv("ANDROID_ENTRYPOINT", p.dir + "/" + entry_point);
                 SDLActivity.nativeSetenv("ANDROID_ARGUMENT", p.dir);
                 SDLActivity.nativeSetenv("ANDROID_APP_PATH", p.dir);
-
-                if (p != null) {
-                    if (p.landscape) {
-                        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-                    } else {
-                        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-                    }
-                }
+				
+				// Removed orientation lock for Android 16+ compatibility
+                // if (p != null) {
+                    //if (p.landscape) {
+                        //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+                    //} else {
+                        //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+                    //}
+                //}
 
                 // Let old apps know they started.
                 try {
